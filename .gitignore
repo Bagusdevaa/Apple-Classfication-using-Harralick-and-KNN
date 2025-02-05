@@ -1,0 +1,43 @@
+# Mengabaikan file Python bytecode
+*.pyc
+*.pyo
+__pycache__/
+
+# Mengabaikan virtual environment
+venv/
+env/
+skripsi/
+
+# Mengabaikan file log dan output sementara
+*.log
+*.out
+*.tmp
+
+# Mengabaikan file konfigurasi/editor IDE
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Mengabaikan file yang berisi data sensitif atau lokal
+*.env
+config.json
+secret_key.txt
+
+# Mengabaikan output Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Mengabaikan file dependen dari package manager
+*.egg-info/
+.eggs/
+
+# File dari build Python
+build/
+dist/
+
+# Mengabaikan file khusus OS
+.DS_Store  # MacOS
+Thumbs.db  # Windows
+
+# File Library dan Dependency
+library.py
+main.ipynb
