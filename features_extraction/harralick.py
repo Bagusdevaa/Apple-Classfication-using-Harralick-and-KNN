@@ -28,7 +28,9 @@ class Harralick:
     """
 
     rows, cols = img.shape
-    levels = np.max(img) + 1  # Jumlah tingkat keabuan
+    levels = np.max(img) + 1 # Jumlah tingkat keabuan
+    if levels > 256:  # Jika nilai maksimum gambar melebihi 256
+      levels = 256  # Ubah ukuran glcm_matrix menjadi 256
     glcm_matrix = np.zeros((levels, levels), dtype=np.uint32)
 
     # Konversi sudut ke radian
