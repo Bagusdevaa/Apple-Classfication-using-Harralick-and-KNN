@@ -1,5 +1,6 @@
 import numpy as np
 from skimage.feature import graycomatrix, graycoprops
+import pandas as pd
 
 # Fungsi untuk menghitung GLCM dan fitur Harralick
 def calculate_additional_features(glcm):
@@ -38,6 +39,20 @@ def calculate_additional_features(glcm):
     return features
 
 
+def load_harralick_features(dataset_path, kombinasiFeature):
+    """
+    Load Haralick features for all (d, theta) combinations.
+    """
+    feature_dataframes = {}
+    for d in kombinasiFeature[0]:
+        for theta in kombinasiFeature[1]:
+            try:
+                df = pd.read_csv(f"{dataset_path}\\ExtractResult\\harralick\\features_d{d}_theta{theta}.csv")
+                df['image'] = [f"img-{i}" for i in range(len(df))]
+                feature_dataframes[(d, theta)] = df
+            except FileNotFoundError:
+                print(f"Dataset for d={d}, theta={theta} not found. Skipping...")
+    return feature_dataframes
 
 # class Harralick:
 #   """
