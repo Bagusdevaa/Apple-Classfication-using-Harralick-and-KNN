@@ -40,9 +40,12 @@ Thumbs.db  # Windows
 
 # File Library dan Dependency
 library.py
-main.ipynb
-gabor_classification.ipynb
-lbp_classification.ipynb
-preprocessing/preprocessing.ipynb
-preprocessing/lbp_preprocessing.ipynb
-preprocessing/yolov5s.pt
+notebooks/gabor_classification.ipynb
+notebooks/lbp_classification.ipynb
+src/preprocessing/preprocessing.ipynb
+src/preprocessing/lbp_preprocessing.ipynb
+src/preprocessing/yolov5s.pt
+notebooks/harralick_classification.ipynb
+notebooks/preprocessing.ipynb
+src/features_extraction/gabor.py
+src/features_extraction/lbp.py
