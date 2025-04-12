@@ -2,15 +2,15 @@ import sys
 import os
 from pathlib import Path
 
-# DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
-# SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
+DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
+SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
 
-# # Get and add the root directory of the project to sys.path
-# BASE_DIR = os.path.dirname(SRC_DIR)
+# Get and add the root directory of the project to sys.path
+BASE_DIR = os.path.dirname(SRC_DIR)
 # sys.path.append(BASE_DIR)
 # import sys
 # Update BASE_DIR to use Pathlib for dynamic path resolution
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.append(BASE_DIR)
 
 import streamlit as st
