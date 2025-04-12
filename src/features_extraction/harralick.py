@@ -46,7 +46,7 @@ def load_harralick_features(dataset_path, kombinasiFeature):
     feature_dataframes = {}
     for d in kombinasiFeature[0]:
         for theta in kombinasiFeature[1]:
-            pathtest = dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{theta}.csv'
+            pathtest = dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{1}.csv'
             if pathtest.exists():
                 print(f"Dataset file found: {pathtest}")
                 # df = pd.read_csv(pathtest)  # Sesuaikan dengan format file Anda

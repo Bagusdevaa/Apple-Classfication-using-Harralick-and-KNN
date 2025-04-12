@@ -77,15 +77,15 @@ for subfolder in BASE_DIR.iterdir():
         st.write(list(subfolder.iterdir()))
 
 # Coba baca file dataset dari subfolder
-dataset_path = BASE_DIR /'ExtractResult'/'harralick'/'features_d1_theta45.csv'  # Ganti dengan nama file Anda
-# st.write(dataset_path)
-# if dataset_path.exists():
-#     st.write(f"Dataset file found: {dataset_path}")
-#     df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
-#     st.write("Dataset loaded successfully!")
-#     st.dataframe(df)
-# else:
-#     st.error(f"Dataset file not found: {dataset_path}")
+dataset_path = BASE_DIR /'ExtractResult'/'harralick'/f'features_d{1}_theta{45}.csv'  # Ganti dengan nama file Anda
+st.write(dataset_path)
+if dataset_path.exists():
+    st.write(f"Dataset file found: {dataset_path}")
+    df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
+    st.write("Dataset loaded successfully!")
+    st.dataframe(df)
+else:
+    st.error(f"Dataset file not found: {dataset_path}")
 
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
