@@ -53,7 +53,7 @@ def load_harralick_features(dataset_path, kombinasiFeature):
                 print("Dataset loaded successfully!")
                 # st.dataframe(df)
             else:
-                st.error(f"Dataset file not found: {pathtest}")
+                print(f"Dataset file not found: {pathtest}")
             try:
                 df = pd.read_csv(f"{dataset_path}\\ExtractResult\\harralick\\features_d{d}_theta{theta}.csv")
                 df['image'] = [f"img-{i}" for i in range(len(df))]
