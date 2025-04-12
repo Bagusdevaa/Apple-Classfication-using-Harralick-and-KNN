@@ -56,14 +56,32 @@ st.write(os.getcwd())
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
-st.write("Contents of BASE_DIR:")
-st.write(list(BASE_DIR.iterdir()))
+# st.write("Contents of BASE_DIR:")
+# st.write(list(BASE_DIR.iterdir()))
 if not BASE_DIR.exists():
     st.error(f"Dataset directory not found: {BASE_DIR}")
 else:
     st.write(f"Dataset directory found: {BASE_DIR}")
     st.write("Contents of dataset directory:")
     st.write(list(BASE_DIR.iterdir()))
+
+# Debugging isi folder dataset
+st.write("Checking contents of dataset directory...")
+for subfolder in BASE_DIR.iterdir():
+    if subfolder.is_dir():
+        st.write(f"Contents of {subfolder}:")
+        st.write(list(subfolder.iterdir()))
+
+# Coba baca file dataset dari subfolder
+dataset_path = BASE_DIR /'ExtractResult'/'harralick'/'features_d1_theta45.csv'  # Ganti dengan nama file Anda
+st.write(dataset_path)
+if dataset_path.exists():
+    st.write(f"Dataset file found: {dataset_path}")
+    df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
+    st.write("Dataset loaded successfully!")
+    st.dataframe(df)
+else:
+    st.error(f"Dataset file not found: {dataset_path}")
 
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
