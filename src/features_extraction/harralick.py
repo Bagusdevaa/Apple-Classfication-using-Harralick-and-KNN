@@ -47,10 +47,10 @@ def load_harralick_features(dataset_path, kombinasiFeature):
     for d in kombinasiFeature[0]:
         for theta in kombinasiFeature[1]:
             if dataset_path.exists():
-                st.write(f"Dataset file found: {dataset_path}")
-                df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
-                st.write("Dataset loaded successfully!")
-                st.dataframe(df)
+                print(f"Dataset file found: {dataset_path}")
+                # df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
+                print("Dataset loaded successfully!")
+                # st.dataframe(df)
             else:
                 st.error(f"Dataset file not found: {dataset_path}")
             try:
