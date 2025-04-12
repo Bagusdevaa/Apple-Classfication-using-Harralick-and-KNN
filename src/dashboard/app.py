@@ -43,6 +43,9 @@ plt.rcParams.update({
 
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
+st.write("Current working directory:")
+st.write(os.getcwd())
+
 
 # Tambahkan log untuk debugging path
 # st.write("Debugging Path:")
@@ -53,10 +56,14 @@ st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
+st.write("Contents of BASE_DIR:")
+st.write(list(BASE_DIR.iterdir()))
 if not BASE_DIR.exists():
     st.error(f"Dataset directory not found: {BASE_DIR}")
 else:
     st.write(f"Dataset directory found: {BASE_DIR}")
+    st.write("Contents of dataset directory:")
+    st.write(list(BASE_DIR.iterdir()))
 
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
