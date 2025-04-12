@@ -8,10 +8,6 @@ SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
 # Get and add the root directory of the project to sys.path
 BASE_DIR = os.path.dirname(SRC_DIR)
 sys.path.append(BASE_DIR)
-# # import sys
-# # Update BASE_DIR to use Pathlib for dynamic path resolution
-# # BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# sys.path.append(BASE_DIR)
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -45,16 +41,14 @@ plt.rcParams.update({
 
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
-st.write("Current working directory:")
-st.write(os.getcwd())
+
+st.write("Current sys.path:")
+st.write(sys.path)
 
 
-# Tambahkan log untuk debugging path
-# st.write("Debugging Path:")
-# st.write(f"BASE_DIR: {BASE_DIR}") # Debugging line to check the BASE_DIR
-# st.write(f"DASHBOARD_DIR: {DASHBOARD_DIR}")
-# st.write(f"SRC_DIR: {SRC_DIR}")
-# st.write(f"BASE_DIR: {BASE_DIR}")
+
+
+
 def load_harralick_features(dataset_path, kombinasiFeature):
     """
     Load Haralick features for all (d, theta) combinations.
@@ -79,39 +73,18 @@ def load_harralick_features(dataset_path, kombinasiFeature):
     return feature_dataframes
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
-BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
-sys.path.append(BASE_DIR)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# st.write("Contents of BASE_DIR:")
-# st.write(list(BASE_DIR.iterdir()))
-if not BASE_DIR.exists():
-    st.error(f"Dataset directory not found: {BASE_DIR}")
+features_dir = BASE_DIR / 'src' / 'features_extraction'
+if features_dir.exists():
+    st.write("Contents of features_extraction directory:")
+    st.write(list(features_dir.iterdir()))
 else:
-    st.write(f"Dataset directory found: {BASE_DIR}")
-    st.write("Contents of dataset directory:")
-    st.write(list(BASE_DIR.iterdir()))
-
-# Debugging isi folder dataset
-st.write("Checking contents of dataset directory...")
-for subfolder in BASE_DIR.iterdir():
-    if subfolder.is_dir():
-        st.write(f"Contents of {subfolder}:")
-        st.write(list(subfolder.iterdir()))
-
-# # Coba baca file dataset dari subfolder
-# dataset_path = BASE_DIR /'ExtractResult'/'harralick'/f'features_d{1}_theta{45}.csv'  # Ganti dengan nama file Anda
-# st.write(dataset_path)
-# if dataset_path.exists():
-#     st.write(f"Dataset file found: {dataset_path}")
-#     df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
-#     st.write("Dataset loaded successfully!")
-#     st.dataframe(df)
-# else:
-#     st.error(f"Dataset file not found: {dataset_path}")
-
+    st.error(f"Directory not found: {features_dir}")
+    
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
-feature_dataframes = load_harralick_features(BASE_DIR, kombinasiFeature)
+feature_dataframes = load_harralick_features(BASE_DIR/ 'dataset', kombinasiFeature)
 # st.dataframe(feature_dataframes)
 # st.table(feature_dataframes.keys())
 
