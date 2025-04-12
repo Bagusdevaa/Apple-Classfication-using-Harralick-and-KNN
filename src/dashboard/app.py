@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 
 DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
 SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
@@ -22,6 +23,8 @@ from src.preprocessing.preprocessing import preprocess_data
 from src.classifier.knn import calculate_knn_results
 from src.utils.metrics import plot_confusion_matrix
 
+# TEST_DIR = Path(__file__).resolve().parent.parent.parent
+# st.write(f"TEST_DIR: {TEST_DIR}") # Debugging line to check the SRC_DIR
 
 # Adjust the matplotlib style for Streamlit
 plt.rcParams.update({
@@ -36,14 +39,24 @@ plt.rcParams.update({
     'legend.edgecolor': '#FFF',     # color for legend border
 })
 
-## load dataset
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
+st.write(f"BASE_DIR: {BASE_DIR}") # Debugging line to check the BASE_DIR
 
-# Update BASE_DIR to use a relative path dynamically
-BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../dataset')
-BASE_DIR = os.path.normpath(BASE_DIR)  # Normalize the path for cross-platform compatibility
+# Tambahkan log untuk debugging path
+st.write("Debugging Path:")
+st.write(f"DASHBOARD_DIR: {DASHBOARD_DIR}")
+st.write(f"SRC_DIR: {SRC_DIR}")
+st.write(f"BASE_DIR: {BASE_DIR}")
 
+# Update BASE_DIR to use Pathlib for dynamic path resolution
+BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
+if not BASE_DIR.exists():
+    st.error(f"Dataset directory not found: {BASE_DIR}")
+else:
+    st.write(f"Dataset directory found: {BASE_DIR}")
+
+## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
 feature_dataframes = load_harralick_features(BASE_DIR, kombinasiFeature)
 
