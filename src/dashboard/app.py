@@ -56,6 +56,8 @@ st.write(os.getcwd())
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
+sys.path.append(BASE_DIR)
+
 # st.write("Contents of BASE_DIR:")
 # st.write(list(BASE_DIR.iterdir()))
 if not BASE_DIR.exists():
@@ -86,7 +88,7 @@ else:
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
 feature_dataframes = load_harralick_features(BASE_DIR, kombinasiFeature)
-st.table(feature_dataframes.keys())
+# st.table(feature_dataframes.keys())
 
 st.title("Apple Ripeness Classification Dashboard")
 st.write(f"""This dashboard displays the analysis results of the author's thesis. 
