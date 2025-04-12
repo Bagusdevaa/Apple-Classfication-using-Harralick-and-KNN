@@ -9,7 +9,9 @@ from pathlib import Path
 # BASE_DIR = os.path.dirname(SRC_DIR)
 # sys.path.append(BASE_DIR)
 # import sys
-
+# Update BASE_DIR to use Pathlib for dynamic path resolution
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+sys.path.append(BASE_DIR)
 
 import streamlit as st
 import streamlit.components.v1 as components
