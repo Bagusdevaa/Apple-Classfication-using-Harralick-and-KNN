@@ -38,29 +38,28 @@ def calculate_additional_features(glcm):
 
     return features
 
-import streamlit as st
-def load_harralick_features(dataset_path, kombinasiFeature):
-    """
-    Load Haralick features for all (d, theta) combinations.
-    """
-    feature_dataframes = {}
-    for d in kombinasiFeature[0]:
-        for theta in kombinasiFeature[1]:
-            pathtest = dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{1}.csv'
-            if pathtest.exists():
-                print(f"Dataset file found: {pathtest}")
-                # df = pd.read_csv(pathtest)  # Sesuaikan dengan format file Anda
-                print("Dataset loaded successfully!")
-                # st.dataframe(df)
-            else:
-                print(f"Dataset file not found: {pathtest}")
-            try:
-                df = pd.read_csv(dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{theta}.csv')
-                df['image'] = [f"img-{i}" for i in range(len(df))]
-                feature_dataframes[(d, theta)] = df
-            except FileNotFoundError:
-                print(f"Dataset for d={d}, theta={theta} not found. Skipping...")
-    return feature_dataframes
+# def load_harralick_features(dataset_path, kombinasiFeature):
+#     """
+#     Load Haralick features for all (d, theta) combinations.
+#     """
+#     feature_dataframes = {}
+#     for d in kombinasiFeature[0]:
+#         for theta in kombinasiFeature[1]:
+#             pathtest = dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{1}.csv'
+#             if pathtest.exists():
+#                 print(f"Dataset file found: {pathtest}")
+#                 # df = pd.read_csv(pathtest)  # Sesuaikan dengan format file Anda
+#                 print("Dataset loaded successfully!")
+#                 # st.dataframe(df)
+#             else:
+#                 print(f"Dataset file not found: {pathtest}")
+#             try:
+#                 df = pd.read_csv(dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{theta}.csv')
+#                 df['image'] = [f"img-{i}" for i in range(len(df))]
+#                 feature_dataframes[(d, theta)] = df
+#             except FileNotFoundError:
+#                 print(f"Dataset for d={d}, theta={theta} not found. Skipping...")
+#     return feature_dataframes
 
 # class Harralick:
 #   """

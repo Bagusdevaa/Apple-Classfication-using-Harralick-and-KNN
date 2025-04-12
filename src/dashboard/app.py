@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import ConfusionMatrixDisplay
-from src.features_extraction.harralick import load_harralick_features
+# from src.features_extraction.harralick import load_harralick_features
 from src.preprocessing.preprocessing import preprocess_data
 from src.classifier.knn import calculate_knn_results
 from src.utils.metrics import plot_confusion_matrix
@@ -55,6 +55,28 @@ st.write(os.getcwd())
 # st.write(f"DASHBOARD_DIR: {DASHBOARD_DIR}")
 # st.write(f"SRC_DIR: {SRC_DIR}")
 # st.write(f"BASE_DIR: {BASE_DIR}")
+def load_harralick_features(dataset_path, kombinasiFeature):
+    """
+    Load Haralick features for all (d, theta) combinations.
+    """
+    feature_dataframes = {}
+    for d in kombinasiFeature[0]:
+        for theta in kombinasiFeature[1]:
+            pathtest = dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{theta}.csv'
+            if pathtest.exists():
+                print(f"Dataset file found: {pathtest}")
+                # df = pd.read_csv(pathtest)  # Sesuaikan dengan format file Anda
+                print("Dataset loaded successfully!")
+                # st.dataframe(df)
+            else:
+                print(f"Dataset file not found: {pathtest}")
+            try:
+                df = pd.read_csv(dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{theta}.csv')
+                df['image'] = [f"img-{i}" for i in range(len(df))]
+                feature_dataframes[(d, theta)] = df
+            except FileNotFoundError:
+                print(f"Dataset for d={d}, theta={theta} not found. Skipping...")
+    return feature_dataframes
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
@@ -76,16 +98,16 @@ for subfolder in BASE_DIR.iterdir():
         st.write(f"Contents of {subfolder}:")
         st.write(list(subfolder.iterdir()))
 
-# Coba baca file dataset dari subfolder
-dataset_path = BASE_DIR /'ExtractResult'/'harralick'/f'features_d{1}_theta{45}.csv'  # Ganti dengan nama file Anda
-st.write(dataset_path)
-if dataset_path.exists():
-    st.write(f"Dataset file found: {dataset_path}")
-    df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
-    st.write("Dataset loaded successfully!")
-    st.dataframe(df)
-else:
-    st.error(f"Dataset file not found: {dataset_path}")
+# # Coba baca file dataset dari subfolder
+# dataset_path = BASE_DIR /'ExtractResult'/'harralick'/f'features_d{1}_theta{45}.csv'  # Ganti dengan nama file Anda
+# st.write(dataset_path)
+# if dataset_path.exists():
+#     st.write(f"Dataset file found: {dataset_path}")
+#     df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
+#     st.write("Dataset loaded successfully!")
+#     st.dataframe(df)
+# else:
+#     st.error(f"Dataset file not found: {dataset_path}")
 
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
