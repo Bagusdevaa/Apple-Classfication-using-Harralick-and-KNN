@@ -42,13 +42,7 @@ plt.rcParams.update({
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
 
-st.write("Current sys.path:")
-st.write(sys.path)
-
-
-
-
-
+## Load Haralick features for all (d, theta) combinations
 def load_harralick_features(dataset_path, kombinasiFeature):
     """
     Load Haralick features for all (d, theta) combinations.
@@ -75,18 +69,9 @@ def load_harralick_features(dataset_path, kombinasiFeature):
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-features_dir = BASE_DIR / 'src' / 'features_extraction'
-if features_dir.exists():
-    st.write("Contents of features_extraction directory:")
-    st.write(list(features_dir.iterdir()))
-else:
-    st.error(f"Directory not found: {features_dir}")
-    
 ## Load Dataset
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
 feature_dataframes = load_harralick_features(BASE_DIR/ 'dataset', kombinasiFeature)
-# st.dataframe(feature_dataframes)
-# st.table(feature_dataframes.keys())
 
 st.title("Apple Ripeness Classification Dashboard")
 st.write(f"""This dashboard displays the analysis results of the author's thesis. 
