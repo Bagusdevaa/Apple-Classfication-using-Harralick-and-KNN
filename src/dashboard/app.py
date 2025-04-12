@@ -2,12 +2,14 @@ import sys
 import os
 from pathlib import Path
 
-DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
-SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
+# DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
+# SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
 
-# Get and add the root directory of the project to sys.path
-BASE_DIR = os.path.dirname(SRC_DIR)
-sys.path.append(BASE_DIR)
+# # Get and add the root directory of the project to sys.path
+# BASE_DIR = os.path.dirname(SRC_DIR)
+# sys.path.append(BASE_DIR)
+# import sys
+
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -41,13 +43,13 @@ plt.rcParams.update({
 
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
-st.write(f"BASE_DIR: {BASE_DIR}") # Debugging line to check the BASE_DIR
 
 # Tambahkan log untuk debugging path
-st.write("Debugging Path:")
-st.write(f"DASHBOARD_DIR: {DASHBOARD_DIR}")
-st.write(f"SRC_DIR: {SRC_DIR}")
-st.write(f"BASE_DIR: {BASE_DIR}")
+# st.write("Debugging Path:")
+# st.write(f"BASE_DIR: {BASE_DIR}") # Debugging line to check the BASE_DIR
+# st.write(f"DASHBOARD_DIR: {DASHBOARD_DIR}")
+# st.write(f"SRC_DIR: {SRC_DIR}")
+# st.write(f"BASE_DIR: {BASE_DIR}")
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
