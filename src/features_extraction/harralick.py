@@ -55,7 +55,7 @@ def load_harralick_features(dataset_path, kombinasiFeature):
             else:
                 print(f"Dataset file not found: {pathtest}")
             try:
-                df = pd.read_csv(f"{dataset_path}\\ExtractResult\\harralick\\features_d{d}_theta{theta}.csv")
+                df = pd.read_csv(dataset_path/'ExtractResult'/'harralick'/f'features_d{d}_theta{theta}.csv')
                 df['image'] = [f"img-{i}" for i in range(len(df))]
                 feature_dataframes[(d, theta)] = df
             except FileNotFoundError:
