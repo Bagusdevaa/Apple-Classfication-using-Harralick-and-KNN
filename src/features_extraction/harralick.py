@@ -38,7 +38,7 @@ def calculate_additional_features(glcm):
 
     return features
 
-
+import streamlit as st
 def load_harralick_features(dataset_path, kombinasiFeature):
     """
     Load Haralick features for all (d, theta) combinations.
@@ -46,6 +46,13 @@ def load_harralick_features(dataset_path, kombinasiFeature):
     feature_dataframes = {}
     for d in kombinasiFeature[0]:
         for theta in kombinasiFeature[1]:
+            if dataset_path.exists():
+                st.write(f"Dataset file found: {dataset_path}")
+                df = pd.read_csv(dataset_path)  # Sesuaikan dengan format file Anda
+                st.write("Dataset loaded successfully!")
+                st.dataframe(df)
+            else:
+                st.error(f"Dataset file not found: {dataset_path}")
             try:
                 df = pd.read_csv(f"{dataset_path}\\ExtractResult\\harralick\\features_d{d}_theta{theta}.csv")
                 df['image'] = [f"img-{i}" for i in range(len(df))]
