@@ -1,8 +1,11 @@
 import sys
 import os
 
-# Add the root directory of the project to sys.path
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
+SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
+
+# Get and add the root directory of the project to sys.path
+BASE_DIR = os.path.dirname(SRC_DIR)
 sys.path.append(BASE_DIR)
 
 import streamlit as st
@@ -18,6 +21,7 @@ from src.features_extraction.harralick import load_harralick_features
 from src.preprocessing.preprocessing import preprocess_data
 from src.classifier.knn import calculate_knn_results
 from src.utils.metrics import plot_confusion_matrix
+
 
 # Adjust the matplotlib style for Streamlit
 plt.rcParams.update({
@@ -36,8 +40,10 @@ plt.rcParams.update({
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
 
-# Load dataset
-BASE_DIR = f"{BASE_DIR}\\dataset"
+# Update BASE_DIR to use a relative path dynamically
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../dataset')
+BASE_DIR = os.path.normpath(BASE_DIR)  # Normalize the path for cross-platform compatibility
+
 kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
 feature_dataframes = load_harralick_features(BASE_DIR, kombinasiFeature)
 
