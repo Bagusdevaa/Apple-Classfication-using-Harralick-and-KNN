@@ -17,14 +17,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import ConfusionMatrixDisplay
-# from src.features_extraction.harralick import load_harralick_features
+from sklearn.metrics import ConfusionMatrixDisplay, classification_report
+import plotly.express as px
+import plotly.graph_objects as go
 from src.preprocessing.preprocessing import preprocess_data
 from src.classifier.knn import calculate_knn_results
 from src.utils.metrics import plot_confusion_matrix
-
-# TEST_DIR = Path(__file__).resolve().parent.parent.parent
-# st.write(f"TEST_DIR: {TEST_DIR}") # Debugging line to check the SRC_DIR
 
 # Adjust the matplotlib style for Streamlit
 plt.rcParams.update({
@@ -59,11 +57,42 @@ def load_harralick_features(dataset_path, kombinasiFeature):
     return feature_dataframes
 
 # Update BASE_DIR to use Pathlib for dynamic path resolution
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
 
-## Load Dataset
-kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
-feature_dataframes = load_harralick_features(BASE_DIR/ 'dataset', kombinasiFeature)
+@st.cache_data
+def load_feature_data():
+    kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
+    return load_harralick_features(BASE_DIR, kombinasiFeature)
+
+@st.cache_data
+def preprocess_and_calculate_results(feature_dataframes, k_values):
+    summary_data = []
+    all_results = {}
+
+    for (d, theta), df in feature_dataframes.items():
+        X_train, X_test, y_train, y_test = preprocess_data(df, drop_columns=['label','homogeneity','sum_variance', 'ASM','IMC2', 'image'])
+        results = calculate_knn_results(X_train, X_test, y_train, y_test, k_values)
+        all_results[(d, theta)] = results
+
+        best_k = max(results, key=lambda k: results[k]['accuracy'])
+        best_accuracy = results[best_k]['accuracy']
+        summary_data.append({'d': d, 'theta': theta, 'best_k': best_k, 'accuracy': best_accuracy})
+
+    return pd.DataFrame(summary_data), all_results
+
+@st.cache_data
+def calculate_classification_report(y_test, y_pred):
+    return classification_report(y_test, y_pred, output_dict=True)
+
+@st.cache_data
+def perform_pca(X_train, X_test, n_components=2):
+    pca = PCA(n_components=n_components)
+    X_train_pca = pca.fit_transform(X_train)
+    X_test_pca = pca.transform(X_test)
+    return X_train_pca, X_test_pca, pca
+
+# Load Dataset
+feature_dataframes = load_feature_data()
 
 st.title("Apple Ripeness Classification Dashboard")
 st.write(f"""This dashboard displays the analysis results of the author's thesis. 
@@ -82,183 +111,342 @@ tab1, tab2 = st.tabs(["Summary Report", "Detailed Results"])
 ### ----- Summary Report -----
 with tab1:
     st.header("Summary Report")
+    tab1col1, tab1col2 = st.columns([4,6])
+    with tab1col1:
 
-    k_values = range(3, 26, 2) # Odd values for k
-    summary_data = []
-    all_results = {}
+        k_values = range(3, 26, 2) # Odd values for k
+        summary_df, all_results = preprocess_and_calculate_results(feature_dataframes, k_values)
 
-    for (d, theta), df in feature_dataframes.items():
-        X_train, X_test, y_train, y_test = preprocess_data(df, drop_columns=['label','homogeneity','sum_variance', 'ASM','IMC2', 'image'])
-        results = calculate_knn_results(X_train, X_test, y_train, y_test, k_values)
-        all_results[(d, theta)] = results
+        st.dataframe(summary_df)
+        best_combination = summary_df.loc[summary_df['accuracy'].idxmax()]
+        st.write(f"**Best Combination:** d={best_combination['d']}, theta={best_combination['theta']}, k={best_combination['best_k']}, Accuracy={best_combination['accuracy']:.2f}")
+    with tab1col2:
+        # Interactive Bar Chart
+        fig = px.bar(summary_df, x='d', y='accuracy', color='theta', title='Accuracy by d and theta', text='accuracy')
+        fig.update_traces(textposition='outside')
+        fig.update_layout(xaxis_title='d', yaxis_title='Accuracy', template='plotly_white')
+        st.plotly_chart(fig, use_container_width=True)
 
-        best_k = max(results, key=lambda k: results[k]['accuracy'])
-        best_accuracy = results[best_k]['accuracy']
-        summary_data.append({'d': d, 'theta': theta, 'best_k': best_k, 'accuracy': best_accuracy})
-
-    summary_df = pd.DataFrame(summary_data)
-    st.dataframe(summary_df)
-    best_combination = summary_df.loc[summary_df['accuracy'].idxmax()]
-    st.write(f"**Best Combination:** d={best_combination['d']}, theta={best_combination['theta']}, k={best_combination['best_k']}, Accuracy={best_combination['accuracy']:.2f}")
-### ----- Summary Report End -----
 
 ### ----- Detailed Results -----
 with tab2:
     st.header("Detailed Results")
-    st.write(f"""Base on the best combination from the summary report, as we can see the best combination is\n  
-            d={best_combination['d']}, theta={best_combination['theta']}, k={best_combination['best_k']}, Accuracy={best_combination['accuracy']:.2f}, 
-            \nbut you can select the other (d, theta) combination to see the detailed results.""")
-    
+    st.write(f"""Base on the best combination from the summary report, as we can see the best combination is""")
+    col_d,col_theta,col_k,col_accuracy = st.columns([1,1,1,1]) 
+    with col_d:
+        st.write(f"```\nd: \n{best_combination['d']}", help="Best d value")
+    with col_theta:
+        st.write(f"```\ntheta: \n{best_combination['theta']}", help="Best theta value")
+    with col_k:
+        st.write(f"```\nk: \n{best_combination['best_k']}", help="Best k value")
+    with col_accuracy:
+        st.write(f"```\nAccuracy: \n{best_combination['accuracy']:.2f}", help="Best accuracy value") 
+ 
+    st.write(f"""but you can select the other (d, theta) and K combination to see the detailed results.""")
+
     # Select a combination (d, theta)
-    d_theta = st.selectbox("Select (d, theta) combination", list(all_results.keys()))
+    d_theta = st.selectbox("Select (d, theta) combination", list(all_results.keys()), help="Choose a combination of d and theta to visualize the results")
     results = all_results[d_theta]
-    col1, col2= st.columns([7, 3])
-    ## ----- RAW 1 VISUALIZATION -----
-    # ----- Plot accuracy vs. k -----
-    with col1:
-        # Plot accuracy vs. k
-        st.subheader("Accuracy vs. k")
-        accuracies = {k: result['accuracy'] for k, result in results.items()}
-        fig, ax = plt.subplots(figsize=(12, 4))
-        ax.plot(list(accuracies.keys()), list(accuracies.values()), marker='o')
-        ax.set_xlabel("k (Number of Neighbors)")
-        ax.set_ylabel("Accuracy")
-        ax.set_title(f"Accuracy vs. k for d={d_theta[0]}, theta={d_theta[1]}")
-        st.pyplot(fig)
-        best_k = max(results, key=lambda k: results[k]['accuracy'])
-        st.write(f"**Best k:** {best_k}, Accuracy: {results[best_k]['accuracy']:.2f}")
-    # ----- Plot accuracy vs. k End -----
 
-    # ----- Confusion Matrix -----
-    with col2:
-        # Show confusion matrix for the best k
+    # Interactive Line Chart for Accuracy vs. k
+    accuracies = {k: result['accuracy'] for k, result in results.items()}
+    line_fig = px.line(x=list(accuracies.keys()), y=list(accuracies.values()), markers=True, title=f"Accuracy vs. k for d={d_theta[0]}, theta={d_theta[1]}")
+    line_fig.update_layout(xaxis_title='k (Number of Neighbors)', yaxis_title='Accuracy', template='plotly_white')
+    st.plotly_chart(line_fig, use_container_width=True)
+
+    # Show the best k from algorithm and allow user to select a custom k
+    best_k = max(results, key=lambda k: results[k]['accuracy'])
+    st.write(f"**Best k:** {best_k}, Accuracy: {results[best_k]['accuracy']:.2f}")
+    # Let user select a custom k value
+    available_k_values = list(results.keys())
+    selected_k = st.selectbox(
+        "Select k value for visualization", 
+        available_k_values,
+        index=available_k_values.index(best_k),  # Default to best_k
+        help="Choose a k value to use for the KNN visualization below"
+    )
+    st.write(f"Selected k: {selected_k}, Accuracy: {results[selected_k]['accuracy']:.2f}")
+    
+    # Use selected_k for visualization and metrics instead of best_k
+    # Get test and prediction data for selected_k
+    y_test = results[selected_k]['y_test']
+    y_pred = results[selected_k]['y_pred']
+    
+    # Create 3 columns for visualizations
+    col_cm, col_report, col_bar = st.columns(3)
+    
+    # Column 1: Confusion Matrix
+    with col_cm:
         st.subheader("Confusion Matrix")
-        cm = results[best_k]['confusion_matrix']
-        fig, ax = plt.subplots(figsize=(6, 4)) 
-        ax.set_facecolor('#00172B')
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        disp.plot(ax=ax, cmap='Blues')
-        ax.set_title(f"Confusion Matrix for k={best_k}", color='#FFF')
-        ax.set_xlabel("Predicted Label", color='#FFF')
-        ax.set_ylabel("True Label", color='#FFF')
-        ax.tick_params(colors='#FFF')  # Warna ticks
-        st.pyplot(fig)
-    # ----- Confusion Matrix End -----
-    ## ----- RAW 1 VISUALIZATION END -----
-
-
-    ## ----- RAW 2 VISUALIZATION -----
-    # Precision, Recall, and F1-Score Visualization
-    st.subheader("Precision, Recall, and F1-Score")
-    raw2col1, raw2col2 = st.columns(2)
-    # ----- classification report -----
-    with raw2col1:  
-        # Get classification report for the best k
-        classification_report = results[best_k]['classification_report']
-
-        # Convert classification report to a DataFrame for easier visualization
-        report_df = pd.DataFrame(classification_report).transpose()
-        # Display the classification report as a table
-        st.write("**Classification Report**")
-        st.dataframe(report_df)
-    # ----- classification report end -----
-
-    # ----- Plot precision, recall, and F1-score as a bar chart -----
-    with raw2col2:
-        st.write("**Bar Chart of Precision, Recall, and F1-Score**")
-        metrics = ['precision', 'recall', 'f1-score']
-        classes = [label for label in classification_report.keys() if isinstance(label, str) and label.isdigit()]
-
-        # Prepare data for the bar chart
-        metric_values = {metric: [classification_report[cls][metric] for cls in classes] for metric in metrics}
-        df_metrics = pd.DataFrame(metric_values, index=classes)
-
-        # Plot the bar chart
-        fig, ax = plt.subplots(figsize=(8, 4))
-        df_metrics.plot(kind='bar', ax=ax, color=['#E694FF', '#0083B8', '#FFF']) 
-        ax.set_facecolor('#00172B')  # Background color
-        ax.set_title(f"Precision, Recall, and F1-Score for k={best_k}", color='#FFF')
-        ax.set_xlabel("Classes", color='#FFF')
-        ax.set_ylabel("Score", color='#FFF')
-        ax.legend(title="Metrics", loc='lower center', facecolor='#0083B8', edgecolor='#FFF', title_fontsize=10, fontsize=9)
-        st.pyplot(fig)
-    # ----- Plot precision, recall, and F1-score as a bar chart end -----
-    ## ----- RAW 2 VISUALIZATION END -----
-
-
-    ## ----- RAW 3 VISUALIZATION -----
-    # ----- Nearest Neighbors Visualization -----
-    st.subheader("Nearest Neighbors Visualization")
-
+        
+        # Calculate confusion matrix
+        conf_matrix = np.zeros((5, 5), dtype=int)  # 5 classes (0-4)
+        for t, p in zip(y_test, y_pred):
+            conf_matrix[t, p] += 1
+        
+        # Create heatmap using Plotly
+        labels = ['20%', '40%', '60%', '80%', '100%']
+        conf_fig = px.imshow(
+            conf_matrix,
+            x=labels,
+            y=labels,
+            color_continuous_scale='Blues',
+            labels=dict(x="Predicted Label", y="True Label", color="Count"),
+            title=f"Confusion Matrix for k={selected_k}",
+            text_auto=True
+        )
+        
+        # Update layout for better readability
+        conf_fig.update_layout(
+            template='plotly_dark',
+            plot_bgcolor='#00172B',
+            paper_bgcolor='#00172B',
+            height=400,
+            xaxis=dict(
+                title_font=dict(size=12),
+                tickfont=dict(size=10),
+                tickvals=[0, 1, 2, 3, 4],
+                ticktext=labels
+            ),
+            yaxis=dict(
+                title_font=dict(size=12),
+                tickfont=dict(size=10),
+                tickvals=[0, 1, 2, 3, 4],
+                ticktext=labels
+            ),
+            coloraxis_showscale=True,
+            margin=dict(l=50, r=50, t=80, b=50),
+            title_font=dict(size=14)
+        )
+        
+        st.plotly_chart(conf_fig, use_container_width=True)
+    
+    # Column 2: Classification Report
+    with col_report:
+        st.subheader("Classification Report")
+        
+        # Add some space before the classification report to align it better
+        st.write("")
+        st.write("")
+        st.write("")
+        
+        # Classification Report
+        class_report = pd.DataFrame(calculate_classification_report(y_test, y_pred)).transpose()
+        st.dataframe(class_report)
+    
+    # Column 3: Bar Chart for Precision, Recall, F1-Score
+    with col_bar:
+        st.subheader("Bar Chart")
+        st.write("")
+        metrics_df = pd.DataFrame(class_report)
+        metrics_df = metrics_df[['precision', 'recall', 'f1-score']].iloc[:-3]  # Exclude support and averages
+        bar_fig = px.bar(metrics_df, barmode='group',title=f"Prec, Rec, F1-Score by Class",)
+        bar_fig.update_layout(
+            template='plotly_white',
+            height=400,
+            xaxis_title='Class',
+            yaxis_title='Score',
+            legend_title='Variable',
+            margin=dict(l=50, r=50, t=30, b=50)
+        )
+        st.plotly_chart(bar_fig, use_container_width=True)
+    
+    # Add Nearest Neighbor visualization with test sample selection
+    st.subheader("Nearest Neighbor Visualization")
+    
     # Use a form to avoid refreshing the entire page
     with st.form("test_sample_form"):
-        test_sample_idx = st.slider("Select Test Sample Index", 0, len(results[best_k]['y_test']) - 1, 0)
+        test_sample_idx = st.slider("Select Test Sample Index", 0, 99, 27)
         submit_button = st.form_submit_button("Update Visualization")
 
-    if submit_button:
-        # Perform PCA for visualization
+    # Always show visualization, update on submit
+    # Perform PCA for visualization
+    X_train, X_test, y_train, y_test = preprocess_data(feature_dataframes[d_theta], drop_columns=['label', 'homogeneity', 'sum_variance', 'ASM', 'IMC2', 'image'])
+    pca = PCA(n_components=2)
+    X_train_2d = pca.fit_transform(X_train)
+    X_test_2d = pca.transform(X_test)
 
-        X_train, X_test, y_train, y_test = preprocess_data(feature_dataframes[d_theta], drop_columns=['label', 'homogeneity', 'sum_variance', 'ASM', 'IMC2', 'image'])
-        pca = PCA(n_components=2)
-        X_train_2d = pca.fit_transform(X_train)
-        X_test_2d = pca.transform(X_test)
+    # Get neighbors for the selected test sample
+    knn = KNeighborsClassifier(n_neighbors=selected_k)
+    knn.fit(X_train, y_train)
+    distances, indices = knn.kneighbors(X_test)
+    neighbors_idx = indices[test_sample_idx]
 
-        # Get neighbors for the selected test sample
-        knn = KNeighborsClassifier(n_neighbors=best_k)
-        knn.fit(X_train, y_train)
-        distances, indices = knn.kneighbors(X_test)
-        neighbors_idx = indices[test_sample_idx]
-
-        # Plot the nearest neighbors
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.set_facecolor('#00172B')
-        # Define label colors
-        label_colors = {0: 'yellow', 1: 'orange', 2: 'green', 3: 'blue', 4: 'red'}
-        label_names = {0: '20% Ripeness', 1: '40% Ripeness', 2: '60% Ripeness', 3: '80% Ripeness', 4: '100% Ripeness'}
-        default_color = 'gray'
-
-        # Plot training data with color coding based on labels
-        y_train_array = np.array(y_train)
-        for label in np.unique(y_train_array):
-            ax.scatter(
-                X_train_2d[y_train_array == label, 0],
-                X_train_2d[y_train_array == label, 1],
-                c=label_colors.get(label, '#FFF'), 
-                label=f"Training Data ({label_names.get(label, 'Unknown')})",
-                alpha=0.6
-            )
-
-        # Highlight test sample
-        ax.scatter(
-            X_test_2d[test_sample_idx, 0],
-            X_test_2d[test_sample_idx, 1],
-            c='#E694FF',  # Color for test sample
-            label='Test Sample',
-            edgecolor='#FFF',
-            s=150
+    # Define label colors and names
+    label_colors = {0: 'yellow', 1: 'orange', 2: 'green', 3: 'blue', 4: 'red'}
+    label_names = {0: '20% Ripeness', 1: '40% Ripeness', 2: '60% Ripeness', 3: '80% Ripeness', 4: '100% Ripeness'}
+    
+    # Create a DataFrame for plotly visualization
+    plot_data = []
+    
+    # Add training data
+    y_train_array = np.array(y_train)
+    for i, (x, y, label) in enumerate(zip(X_train_2d[:, 0], X_train_2d[:, 1], y_train_array)):
+        is_neighbor = i in neighbors_idx
+        neighbor_text = f"Neighbor ({label_names.get(label, 'Unknown')})" if is_neighbor else None
+        
+        if is_neighbor:
+            marker_size = 15
+            border_width = 2
+            legend_group = f"Neighbor ({label_names.get(label, 'Unknown')})"
+        else:
+            marker_size = 8
+            border_width = 0
+            legend_group = f"Training Data ({label_names.get(label, 'Unknown')})"
+            
+        plot_data.append({
+            'PCA Component 1': x, 
+            'PCA Component 2': y,
+            'Label': str(label),
+            'Category': 'Training Data',
+            'Ripeness': label_names.get(label, 'Unknown'),
+            'Size': marker_size,
+            'BorderWidth': border_width,
+            'LegendGroup': legend_group,
+            'IsNeighbor': is_neighbor,
+            'NeighborText': neighbor_text
+        })
+    
+    # Add test sample
+    plot_data.append({
+        'PCA Component 1': X_test_2d[test_sample_idx, 0],
+        'PCA Component 2': X_test_2d[test_sample_idx, 1],
+        'Label': str(y_test.iloc[test_sample_idx]),
+        'Category': 'Test Sample',
+        'Ripeness': label_names.get(y_test.iloc[test_sample_idx], 'Unknown'),
+        'Size': 20,
+        'BorderWidth': 2,
+        'LegendGroup': 'Test Sample',
+        'IsNeighbor': False,
+        'NeighborText': None
+    })
+    
+    plot_df = pd.DataFrame(plot_data)
+    
+    # Create Plotly figure
+    fig = px.scatter(
+        plot_df, 
+        x='PCA Component 1', 
+        y='PCA Component 2',
+        color='Ripeness',
+        symbol='Category',
+        size='Size',
+        title=f"Visualization of {selected_k} Nearest Neighbors for Test Sample {test_sample_idx}",
+        color_discrete_map={
+            '20% Ripeness': 'yellow',
+            '40% Ripeness': 'orange',
+            '60% Ripeness': 'green',
+            '80% Ripeness': 'blue',
+            '100% Ripeness': 'red',
+        },
+        symbol_map={
+            'Training Data': 'circle',
+            'Test Sample': 'diamond',
+        },
+        hover_data={
+            'Label': True,
+            'Category': True,
+            'Ripeness': True,
+            'IsNeighbor': False,
+            'Size': False,
+            'BorderWidth': False,
+            'LegendGroup': False,
+            'NeighborText': True
+        }
+    )
+    
+    # Customize the figure
+    fig.update_layout(
+        template='plotly_dark',
+        plot_bgcolor='#00172B',
+        paper_bgcolor='#00172B',
+        legend_title_text='Legend',
+        height=600,
+        title={
+            'text': f"Visualization of {selected_k} Nearest Neighbors for Test Sample {test_sample_idx}",
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        }
+    )
+    
+    # Customize markers for each point individually (but don't add to legend)
+    for i, row in plot_df.iterrows():
+        fig.add_scatter(
+            x=[row['PCA Component 1']],
+            y=[row['PCA Component 2']],
+            mode='markers',
+            marker=dict(
+                color=label_colors.get(int(row['Label']), 'gray'),
+                size=row['Size'],
+                line=dict(width=row['BorderWidth'], color='black'),
+                symbol='diamond' if row['Category'] == 'Test Sample' else 'circle'
+            ),
+            legendgroup=row['LegendGroup'],
+            name=row['LegendGroup'],
+            showlegend=False,  # Don't show in legend to avoid duplicates
+            hoverinfo='text',
+            hovertext=f"{row['Category']}<br>Label: {row['Label']}<br>Ripeness: {row['Ripeness']}<br>{row['NeighborText'] if row['NeighborText'] else ''}"
         )
-
-        # Highlight the nearest neighbors
-        for neighbor_idx in neighbors_idx:
-            ax.scatter(
-                X_train_2d[neighbor_idx, 0],
-                X_train_2d[neighbor_idx, 1],
-                c=label_colors.get(y_train_array[neighbor_idx], default_color),
-                edgecolor='black',
-                s=100,
-                label=f"Neighbor ({label_names.get(y_train_array[neighbor_idx], 'Unknown')})"
+    
+    # Simplified legend with only relevant entries
+    # Count occurrences of each label in neighbors
+    neighbor_label_counts = {}
+    for idx in neighbors_idx:
+        label = y_train_array[idx]
+        if label in neighbor_label_counts:
+            neighbor_label_counts[label] += 1
+        else:
+            neighbor_label_counts[label] = 1
+            
+    # Add only the labels with neighbors to legend (in descending order of occurrence)
+    for label, count in sorted(neighbor_label_counts.items(), key=lambda x: x[1], reverse=True):
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                mode='markers',
+                marker=dict(
+                    color=label_colors.get(label, 'gray'),
+                    size=15,
+                    line=dict(width=2, color='black'),
+                    symbol='circle'
+                ),
+                name=f"Neighbor ({label_names.get(label, 'Unknown')}) - {count}/{selected_k}",
+                legendgroup=f"Neighbor ({label_names.get(label, 'Unknown')})",
+                showlegend=True
             )
-
-        # Add legend and labels
-        ax.legend(loc='best', bbox_to_anchor=(1.05, 1), title="Legend", facecolor='#0083B8', edgecolor='#FFF')
-        ax.set_title(f"Visualization of {best_k} Nearest Neighbors for Test Sample {test_sample_idx + 1}", color='#FFF')
-        ax.set_xlabel('PCA Component 1', color='#FFF')
-        ax.set_ylabel('PCA Component 2', color='#FFF')
-        st.pyplot(fig)
-        # ----- Nearest Neighbors Visualization End -----
-        ## ----- RAW 3 VISUALIZATION END -----
-        ### ----- Detail Results END -----
-
+        )
+    
+    # Add test sample to legend
+    test_label = y_test.iloc[test_sample_idx]
+    fig.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode='markers',
+            marker=dict(
+                color=label_colors.get(test_label, 'gray'),
+                size=20,
+                line=dict(width=2, color='black'),
+                symbol='diamond'
+            ),
+            name=f"Test Sample ({label_names.get(test_label, 'Unknown')})",
+            legendgroup='Test Sample',
+            showlegend=True
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Display test sample prediction info
+    true_label = y_test.iloc[test_sample_idx]
+    pred_label = y_pred[test_sample_idx]
+    st.write(f"**Test Sample #{test_sample_idx}:**")
+    st.write(f"- True Label: {true_label} ({label_names.get(true_label, 'Unknown')})")
+    st.write(f"- Predicted Label: {pred_label} ({label_names.get(pred_label, 'Unknown')})")
+    st.write(f"- Prediction {'Correct' if true_label == pred_label else 'Incorrect'}")
 
 ## ----- HIDE STREAMLIT STYLE -----
 hide_st_style = """
