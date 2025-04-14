@@ -2,13 +2,16 @@ import sys
 import os
 from pathlib import Path
 
+## ----- Path Configuration -----
 DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__)) # Get the directory of the current file
 SRC_DIR = os.path.dirname(DASHBOARD_DIR) # Get the parent directory (src)
 
 # Get and add the root directory of the project to sys.path
 BASE_DIR = os.path.dirname(SRC_DIR)
 sys.path.append(BASE_DIR)
+## ----- Path Configuration END -----
 
+## ----- Imports -----
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -23,8 +26,9 @@ import plotly.graph_objects as go
 from src.preprocessing.preprocessing import preprocess_data
 from src.classifier.knn import calculate_knn_results
 from src.utils.metrics import plot_confusion_matrix
+## ----- Imports END -----
 
-# Adjust the matplotlib style for Streamlit
+## ----- Matplotlib Style Configuration -----
 plt.rcParams.update({
     'axes.facecolor': '#00172B', # background color for plot area
     'axes.edgecolor': '#FFF',    # Color for axes border
@@ -36,11 +40,13 @@ plt.rcParams.update({
     'legend.facecolor': '#0083B8',  # Background color for legend
     'legend.edgecolor': '#FFF',     # color for legend border
 })
+## ----- Matplotlib Style Configuration END -----
 
+## ----- Streamlit Configuration -----
 # Set Streamlit page configuration
 st.set_page_config(layout="wide", page_title="Report Dashboard", page_icon=":bar_chart:")
 
-## Load Haralick features for all (d, theta) combinations
+## ----- Load Haralick features for all (d, theta) combinations -----
 def load_harralick_features(dataset_path, kombinasiFeature):
     """
     Load Haralick features for all (d, theta) combinations.
@@ -55,7 +61,9 @@ def load_harralick_features(dataset_path, kombinasiFeature):
             except FileNotFoundError:
                 print(f"Dataset for d={d}, theta={theta} not found. Skipping...")
     return feature_dataframes
+## ----- Load Haralick features for all (d, theta) combinations END-----
 
+## ----- Path and Data Loading -----
 # Update BASE_DIR to use Pathlib for dynamic path resolution
 BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
 
@@ -63,7 +71,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'dataset'
 def load_feature_data():
     kombinasiFeature = [[1, 2, 3], [0, 45, 90, 135]]
     return load_harralick_features(BASE_DIR, kombinasiFeature)
+## ----- Path and Data Loading END -----
 
+## ----- Data Processing Functions -----
 @st.cache_data
 def preprocess_and_calculate_results(feature_dataframes, k_values):
     summary_data = []
@@ -90,7 +100,9 @@ def perform_pca(X_train, X_test, n_components=2):
     X_train_pca = pca.fit_transform(X_train)
     X_test_pca = pca.transform(X_test)
     return X_train_pca, X_test_pca, pca
+## ----- Data Processing Functions END -----
 
+## ----- Main Application -----
 # Load Dataset
 feature_dataframes = load_feature_data()
 
@@ -108,7 +120,7 @@ st.write(f"""This dashboard displays the analysis results of the author's thesis
 # Tabs for Summary and Detailed Results
 tab1, tab2 = st.tabs(["Summary Report", "Detailed Results"])
 
-### ----- Summary Report -----
+## ----- Summary Report Tab -----
 with tab1:
     st.header("Summary Report")
     tab1col1, tab1col2 = st.columns([4,6])
@@ -126,9 +138,9 @@ with tab1:
         fig.update_traces(textposition='outside')
         fig.update_layout(xaxis_title='d', yaxis_title='Accuracy', template='plotly_white')
         st.plotly_chart(fig, use_container_width=True)
+## ----- Summary Report Tab END -----
 
-
-### ----- Detailed Results -----
+## ----- Detailed Results Tab -----
 with tab2:
     st.header("Detailed Results")
     st.write(f"""Base on the best combination from the summary report, as we can see the best combination is""")
@@ -144,6 +156,7 @@ with tab2:
  
     st.write(f"""but you can select the other (d, theta) and K combination to see the detailed results.""")
 
+    ## ----- Parameter Selection -----
     # Select a combination (d, theta)
     d_theta = st.selectbox("Select (d, theta) combination", list(all_results.keys()), help="Choose a combination of d and theta to visualize the results")
     results = all_results[d_theta]
@@ -166,8 +179,9 @@ with tab2:
         help="Choose a k value to use for the KNN visualization below"
     )
     st.write(f"Selected k: {selected_k}, Accuracy: {results[selected_k]['accuracy']:.2f}")
+    ## ----- Parameter Selection END -----
     
-    # Use selected_k for visualization and metrics instead of best_k
+    ## ----- Results Metrics Display -----
     # Get test and prediction data for selected_k
     y_test = results[selected_k]['y_test']
     y_pred = results[selected_k]['y_pred']
@@ -250,8 +264,9 @@ with tab2:
             margin=dict(l=50, r=50, t=30, b=50)
         )
         st.plotly_chart(bar_fig, use_container_width=True)
+    ## ----- Results Metrics Display END -----
     
-    # Add Nearest Neighbor visualization with test sample selection
+    ## ----- Nearest Neighbor Visualization -----
     st.subheader("Nearest Neighbor Visualization")
     
     # Use a form to avoid refreshing the entire page
@@ -272,6 +287,7 @@ with tab2:
     distances, indices = knn.kneighbors(X_test)
     neighbors_idx = indices[test_sample_idx]
 
+    ## ----- PCA Visualization Data Preparation -----
     # Define label colors and names
     label_colors = {0: 'yellow', 1: 'orange', 2: 'green', 3: 'blue', 4: 'red'}
     label_names = {0: '20% Ripeness', 1: '40% Ripeness', 2: '60% Ripeness', 3: '80% Ripeness', 4: '100% Ripeness'}
@@ -322,7 +338,9 @@ with tab2:
     })
     
     plot_df = pd.DataFrame(plot_data)
+    ## ----- PCA Visualization Data Preparation END -----
     
+    ## ----- Plotly Visualization -----
     # Create Plotly figure
     fig = px.scatter(
         plot_df, 
@@ -390,7 +408,7 @@ with tab2:
             hovertext=f"{row['Category']}<br>Label: {row['Label']}<br>Ripeness: {row['Ripeness']}<br>{row['NeighborText'] if row['NeighborText'] else ''}"
         )
     
-    # Simplified legend with only relevant entries
+    ## ----- Legend Customization -----
     # Count occurrences of each label in neighbors
     neighbor_label_counts = {}
     for idx in neighbors_idx:
@@ -437,6 +455,7 @@ with tab2:
             showlegend=True
         )
     )
+    ## ----- Legend Customization END -----
     
     st.plotly_chart(fig, use_container_width=True)
     
@@ -447,6 +466,8 @@ with tab2:
     st.write(f"- True Label: {true_label} ({label_names.get(true_label, 'Unknown')})")
     st.write(f"- Predicted Label: {pred_label} ({label_names.get(pred_label, 'Unknown')})")
     st.write(f"- Prediction {'Correct' if true_label == pred_label else 'Incorrect'}")
+    ## ----- Nearest Neighbor Visualization END -----
+## ----- Detailed Results Tab END -----
 
 ## ----- HIDE STREAMLIT STYLE -----
 hide_st_style = """
@@ -457,3 +478,4 @@ hide_st_style = """
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
 ## ----- HIDE STREAMLIT STYLE END -----
+## ----- Main Application END -----
