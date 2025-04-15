@@ -24,7 +24,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, classification_report
 import plotly.express as px
 import plotly.graph_objects as go
 from src.preprocessing.preprocessing import preprocess_data
-from src.classifier.knn import calculate_knn_results
+from src.classifier.knn import calculate_knn_results, calculate_kfold_cv_score
 from src.utils.metrics import plot_confusion_matrix
 ## ----- Imports END -----
 
@@ -100,7 +100,33 @@ def perform_pca(X_train, X_test, n_components=2):
     X_train_pca = pca.fit_transform(X_train)
     X_test_pca = pca.transform(X_test)
     return X_train_pca, X_test_pca, pca
-## ----- Data Processing Functions END -----
+
+## ----- Cross Validation Functions -----
+@st.cache_data
+def calculate_cross_validation_results(feature_dataframes, summary_df, n_splits=5):
+    """
+    Perform K-fold cross validation on the best k value for each (d, theta) combination
+    """
+    cv_results = {}
+    
+    for _, row in summary_df.iterrows():
+        d = row['d']
+        theta = row['theta']
+        best_k = int(row['best_k'])  # Convert best_k to int to fix the error
+        
+        # Get data for this combination
+        df = feature_dataframes[(d, theta)]
+        
+        # Preprocess all data (don't split into train/test yet as CV will do that)
+        X = df.drop(columns=['label', 'homogeneity', 'sum_variance', 'ASM', 'IMC2', 'image'])
+        y = df['label']
+        
+        # Perform cross-validation
+        cv_result = calculate_kfold_cv_score(X, y, best_k, n_splits=n_splits)
+        cv_results[(d, theta, best_k)] = cv_result
+    
+    return cv_results
+## ----- Cross Validation Functions END -----
 
 ## ----- Main Application -----
 # Load Dataset
@@ -118,7 +144,7 @@ st.write(f"""This dashboard displays the analysis results of the author's thesis
         Label 4 = 100% apple ripeness level""")
 
 # Tabs for Summary and Detailed Results
-tab1, tab2 = st.tabs(["Summary Report", "Detailed Results"])
+tab1, tab2, tab3 = st.tabs(["Summary Report", "Detailed Results", "Cross Validation"])
 
 ## ----- Summary Report Tab -----
 with tab1:
@@ -468,6 +494,326 @@ with tab2:
     st.write(f"- Prediction {'Correct' if true_label == pred_label else 'Incorrect'}")
     ## ----- Nearest Neighbor Visualization END -----
 ## ----- Detailed Results Tab END -----
+
+## ----- Cross Validation Tab -----
+with tab3:
+    st.header("K-Fold Cross Validation Results")
+    
+    # Define number of folds for cross-validation
+    n_splits = st.slider("Number of folds for cross-validation", min_value=3, max_value=10, value=5)
+    
+    # Calculate cross-validation results for the best k value of each (d, theta) combination
+    cv_results = calculate_cross_validation_results(feature_dataframes, summary_df, n_splits)
+    
+    # Create a summary dataframe for CV results
+    cv_summary_data = []
+    for (d, theta, k), result in cv_results.items():
+        cv_summary_data.append({
+            'd': d,
+            'theta': theta,
+            'k': k,
+            'mean_cv_accuracy': result['mean_cv_score'],
+            'std_cv_accuracy': result['std_cv_score'],
+        })
+    
+    cv_summary_df = pd.DataFrame(cv_summary_data)
+    
+    # Display the CV summary
+    st.subheader("Cross Validation Summary")
+    st.write(f"Results of {n_splits}-fold cross validation for the best k value of each (d, theta) combination:")
+    st.dataframe(cv_summary_df.style.format({
+        'mean_cv_accuracy': "{:.4f}",
+        'std_cv_accuracy': "{:.4f}"
+    }))
+    
+    # Find the best combination based on CV
+    best_cv_combo = cv_summary_df.loc[cv_summary_df['mean_cv_accuracy'].idxmax()]
+    st.write(f"""
+    **Best Combination (Cross Validation):**
+    - d = {best_cv_combo['d']}
+    - theta = {best_cv_combo['theta']}
+    - k = {best_cv_combo['k']}
+    - Mean CV Accuracy = {best_cv_combo['mean_cv_accuracy']:.4f}
+    - Standard Deviation = {best_cv_combo['std_cv_accuracy']:.4f}
+    """)
+    
+    # Visualizations
+    # 1. Bar chart of mean CV accuracy by (d, theta) combination
+    cv_bar_fig = px.bar(
+        cv_summary_df, 
+        x=['d', 'theta'],
+        y='mean_cv_accuracy',
+        error_y='std_cv_accuracy',
+        color='d',
+        barmode='group',
+        title="Cross Validation Accuracy by (d, theta) Combination",
+        labels={'mean_cv_accuracy': 'Mean CV Accuracy', 'std_cv_accuracy': 'Standard Deviation'}
+    )
+    cv_bar_fig.update_layout(template='plotly_white')
+    st.plotly_chart(cv_bar_fig, use_container_width=True)
+    
+    # 2. Detailed view of selected combination
+    st.subheader("Detailed Cross Validation Results")
+    
+    # Select a (d, theta, k) combination to view detailed results
+    cv_combo_options = [(d, theta, k) for d, theta, k in cv_results.keys()]
+    selected_combo_str = st.selectbox(
+        "Select a combination to view detailed fold results:",
+        options=[f"d={d}, theta={theta}, k={k}" for d, theta, k in cv_combo_options],
+        index=cv_combo_options.index((best_cv_combo['d'], best_cv_combo['theta'], best_cv_combo['k']))
+    )
+    
+    # Parse the selected combo string back to tuple
+    parts = selected_combo_str.split(', ')
+    selected_d = int(float(parts[0].split('=')[1]))
+    selected_theta = int(float(parts[1].split('=')[1]))
+    selected_k = int(float(parts[2].split('=')[1]))
+    selected_combo = (selected_d, selected_theta, selected_k)
+    
+    # Get the detailed results for the selected combination
+    selected_cv_result = cv_results[selected_combo]
+    
+    # Display fold accuracies
+    fold_accuracies = [fold_result['accuracy'] for fold_result in selected_cv_result['fold_results']]
+    fold_df = pd.DataFrame({
+        'Fold': [f"Fold {i+1}" for i in range(len(fold_accuracies))],
+        'Accuracy': fold_accuracies
+    })
+    
+    # Bar chart of fold accuracies
+    fold_fig = px.bar(
+        fold_df,
+        x='Fold',
+        y='Accuracy',
+        title=f"Accuracy by Fold for d={selected_combo[0]}, theta={selected_combo[1]}, k={selected_combo[2]}",
+        color='Accuracy',
+        color_continuous_scale='Viridis'
+    )
+    fold_fig.add_hline(
+        y=selected_cv_result['mean_cv_score'], 
+        line_dash="dash", 
+        line_color="red",
+        annotation_text=f"Mean: {selected_cv_result['mean_cv_score']:.4f}"
+    )
+    fold_fig.update_layout(template='plotly_white', yaxis_range=[0, 1])
+    st.plotly_chart(fold_fig, use_container_width=True)
+    
+    ## ----- Detailed K-fold Metrics -----
+    st.subheader("Detailed Metrics for Each Fold")
+    
+    # Add metrics tabs for detailed analysis
+    metric_tabs = st.tabs(["Confusion Matrices", "Class Metrics", "Fold Comparison"])
+    
+    # Tab 1: Confusion Matrices for each fold
+    with metric_tabs[0]:
+        # Create grid of confusion matrices
+        n_cols = min(3, n_splits)  # Max 3 columns
+        n_rows = (n_splits + n_cols - 1) // n_cols  # Ceiling division
+        
+        # Create figure for all confusion matrices
+        labels = ['20%', '40%', '60%', '80%', '100%']
+        for row in range(n_rows):
+            cols = st.columns(n_cols)
+            for col_idx in range(n_cols):
+                fold_idx = row * n_cols + col_idx
+                if fold_idx < n_splits:
+                    with cols[col_idx]:
+                        fold_result = selected_cv_result['fold_results'][fold_idx]
+                        st.write(f"**Fold {fold_idx+1}** (Acc: {fold_result['accuracy']:.4f})")
+                        
+                        # Create heatmap for this fold's confusion matrix
+                        fold_cm_fig = px.imshow(
+                            fold_result['confusion_matrix'],
+                            x=labels,
+                            y=labels,
+                            color_continuous_scale='Blues',
+                            labels=dict(x="Predicted", y="True", color="Count"),
+                            text_auto=True
+                        )
+                        fold_cm_fig.update_layout(
+                            height=300,
+                            width=300,
+                            margin=dict(l=40, r=40, t=40, b=40)
+                        )
+                        st.plotly_chart(fold_cm_fig)
+    
+    # Tab 2: Class-specific metrics for each fold
+    with metric_tabs[1]:
+        # Extract class metrics from each fold
+        class_metrics_data = []
+        for fold_idx, fold_result in enumerate(selected_cv_result['fold_results']):
+            for class_label, metrics in fold_result['classification_report'].items():
+                if class_label.isdigit():  # Only include actual classes, not averages
+                    class_metrics_data.append({
+                        'Fold': fold_idx + 1,
+                        'Class': int(class_label),
+                        'Class Name': label_names.get(int(class_label), f"Class {class_label}"),
+                        'Precision': metrics['precision'],
+                        'Recall': metrics['recall'],
+                        'F1-Score': metrics['f1-score'],
+                        'Support': metrics['support']
+                    })
+        
+        class_metrics_df = pd.DataFrame(class_metrics_data)
+        
+        # Interactive selection for class
+        selected_metric = st.selectbox(
+            "Select metric to visualize:", 
+            ["Precision", "Recall", "F1-Score"], 
+            index=2  # Default to F1-Score
+        )
+        
+        # Create grouped bar chart for the selected metric across folds and classes
+        class_metric_fig = px.bar(
+            class_metrics_df,
+            x="Class Name",
+            y=selected_metric,
+            color="Fold",
+            barmode="group",
+            title=f"{selected_metric} by Class and Fold",
+            labels={selected_metric: selected_metric, "Class Name": "Ripeness Level"},
+            color_continuous_scale="Viridis"
+        )
+        class_metric_fig.update_layout(template='plotly_white', yaxis_range=[0, 1])
+        st.plotly_chart(class_metric_fig, use_container_width=True)
+        
+        # Show detailed metrics table with expandable sections by class
+        st.subheader("Detailed Class Metrics by Fold")
+        
+        # Group by class for expandable sections
+        for class_label in sorted(class_metrics_df['Class'].unique()):
+            class_name = label_names.get(class_label, f"Class {class_label}")
+            with st.expander(f"{class_name} (Class {class_label}) Metrics"):
+                class_data = class_metrics_df[class_metrics_df['Class'] == class_label]
+                st.dataframe(
+                    class_data[['Fold', 'Precision', 'Recall', 'F1-Score', 'Support']]
+                    .set_index('Fold')
+                    .style.format({
+                        'Precision': "{:.4f}",
+                        'Recall': "{:.4f}",
+                        'F1-Score': "{:.4f}",
+                        'Support': "{:.0f}"
+                    })
+                )
+                
+                # Add radar chart for this class across folds
+                radar_fig = go.Figure()
+                
+                for fold_idx, fold_data in class_data.groupby('Fold'):
+                    radar_fig.add_trace(go.Scatterpolar(
+                        r=[fold_data['Precision'].values[0], fold_data['Recall'].values[0], fold_data['F1-Score'].values[0]],
+                        theta=['Precision', 'Recall', 'F1-Score'],
+                        fill='toself',
+                        name=f'Fold {fold_idx}'
+                    ))
+                
+                radar_fig.update_layout(
+                    polar=dict(
+                        radialaxis=dict(
+                            visible=True,
+                            range=[0, 1]
+                        )
+                    ),
+                    showlegend=True,
+                    title=f"Metric Comparison for {class_name}",
+                    height=400
+                )
+                st.plotly_chart(radar_fig)
+    
+    # Tab 3: Fold Comparison - Compare metrics across folds
+    with metric_tabs[2]:
+        st.write("### Compare Metrics Across Folds")
+        
+        # Calculate aggregate metrics for each fold
+        fold_aggregate_metrics = []
+        for fold_idx, fold_result in enumerate(selected_cv_result['fold_results']):
+            # Get the "macro avg" or "weighted avg" from classification report
+            macro_metrics = fold_result['classification_report'].get('macro avg', {})
+            weighted_metrics = fold_result['classification_report'].get('weighted avg', {})
+            
+            fold_aggregate_metrics.append({
+                'Fold': fold_idx + 1,
+                'Accuracy': fold_result['accuracy'],
+                'Macro Precision': macro_metrics.get('precision', 0),
+                'Macro Recall': macro_metrics.get('recall', 0),
+                'Macro F1-Score': macro_metrics.get('f1-score', 0),
+                'Weighted Precision': weighted_metrics.get('precision', 0),
+                'Weighted Recall': weighted_metrics.get('recall', 0),
+                'Weighted F1-Score': weighted_metrics.get('f1-score', 0),
+            })
+        
+        fold_metrics_df = pd.DataFrame(fold_aggregate_metrics)
+        
+        # Display the metrics table
+        st.write("#### Aggregate Metrics by Fold")
+        st.dataframe(
+            fold_metrics_df.set_index('Fold')
+            .style.format({
+                'Accuracy': "{:.4f}",
+                'Macro Precision': "{:.4f}",
+                'Macro Recall': "{:.4f}",
+                'Macro F1-Score': "{:.4f}",
+                'Weighted Precision': "{:.4f}",
+                'Weighted Recall': "{:.4f}",
+                'Weighted F1-Score': "{:.4f}"
+            })
+        )
+        
+        # Create parallel coordinates plot for comparing folds
+        parallel_fig = px.parallel_coordinates(
+            fold_metrics_df,
+            color="Accuracy",
+            dimensions=['Fold', 'Accuracy', 'Macro Precision', 'Macro Recall', 
+                        'Macro F1-Score', 'Weighted F1-Score'],
+            labels={
+                'Fold': 'Fold Number',
+                'Accuracy': 'Accuracy',
+                'Macro Precision': 'Macro Precision',
+                'Macro Recall': 'Macro Recall',
+                'Macro F1-Score': 'Macro F1-Score',
+                'Weighted F1-Score': 'Weighted F1-Score'
+            },
+            color_continuous_scale='Viridis',
+            title="Parallel Coordinates Plot of Metrics Across Folds"
+        )
+        st.plotly_chart(parallel_fig, use_container_width=True)
+        
+        # Show boxplots of metrics distribution across folds
+        metrics_long_df = pd.melt(
+            fold_metrics_df, 
+            id_vars=['Fold'],
+            value_vars=['Accuracy', 'Macro Precision', 'Macro Recall', 'Macro F1-Score', 
+                        'Weighted Precision', 'Weighted Recall', 'Weighted F1-Score'],
+            var_name='Metric',
+            value_name='Value'
+        )
+        
+        box_fig = px.box(
+            metrics_long_df,
+            x="Metric",
+            y="Value",
+            points="all",
+            title="Distribution of Metrics Across Folds",
+        )
+        box_fig.update_layout(template='plotly_white')
+        st.plotly_chart(box_fig, use_container_width=True)
+        
+        # Add statistical summary of metrics
+        st.write("#### Statistical Summary of Metrics Across Folds")
+        metrics_summary = fold_metrics_df.describe().T[['mean', 'std', 'min', '25%', '50%', '75%', 'max']]
+        st.dataframe(
+            metrics_summary
+            .style.format({
+                'mean': "{:.4f}",
+                'std': "{:.4f}",
+                'min': "{:.4f}",
+                '25%': "{:.4f}",
+                '50%': "{:.4f}",
+                '75%': "{:.4f}",
+                'max': "{:.4f}"
+            })
+        )
+## ----- Cross Validation Tab END -----
 
 ## ----- HIDE STREAMLIT STYLE -----
 hide_st_style = """
