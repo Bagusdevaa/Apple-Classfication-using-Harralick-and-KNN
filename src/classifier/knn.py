@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.model_selection import KFold, cross_val_score
 
 def calculate_knn_results(X_train, X_test, y_train, y_test, k_values):
     """
@@ -23,6 +24,65 @@ def calculate_knn_results(X_train, X_test, y_train, y_test, k_values):
         }
     return results
 
+## ----- K-Fold Cross Validation Functions -----
+def calculate_kfold_cv_score(X, y, k_value, n_splits=5, random_state=42):
+    """
+    Perform K-fold cross validation for a specific k value in KNN.
+    
+    Parameters:
+    -----------
+    X : array-like 
+        Features data
+    y : array-like
+        Target values
+    k_value : int
+        The k value for KNN (number of neighbors)
+    n_splits : int, default=5
+        Number of folds for cross validation
+    random_state : int, default=42
+        Random seed for reproducibility
+        
+    Returns:
+    --------
+    dict: Dictionary with cross validation results
+    """
+    knn = KNeighborsClassifier(n_neighbors=k_value)
+    cv = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    
+    # Calculate accuracy scores
+    cv_scores = cross_val_score(knn, X, y, cv=cv, scoring='accuracy')
+    
+    # Create detailed results for each fold
+    fold_results = []
+    fold_indices = list(cv.split(X))
+    
+    for i, (train_idx, test_idx) in enumerate(fold_indices):
+        X_fold_train, X_fold_test = X.iloc[train_idx], X.iloc[test_idx]
+        y_fold_train, y_fold_test = y.iloc[train_idx], y.iloc[test_idx]
+        
+        # Train and predict
+        knn.fit(X_fold_train, y_fold_train)
+        y_fold_pred = knn.predict(X_fold_test)
+        
+        # Calculate metrics
+        fold_accuracy = accuracy_score(y_fold_test, y_fold_pred)
+        fold_cm = confusion_matrix(y_fold_test, y_fold_pred)
+        fold_report = classification_report(y_fold_test, y_fold_pred, output_dict=True)
+        
+        fold_results.append({
+            'fold': i+1,
+            'accuracy': fold_accuracy,
+            'confusion_matrix': fold_cm,
+            'classification_report': fold_report
+        })
+    
+    return {
+        'cv_scores': cv_scores,
+        'mean_cv_score': cv_scores.mean(),
+        'std_cv_score': cv_scores.std(),
+        'fold_results': fold_results
+    }
+## ----- K-Fold Cross Validation Functions END -----
 
 # # Fungsi untuk menghitung jarak (Euclidean Distance)
 # def euclidean_distance(point1, point2):
