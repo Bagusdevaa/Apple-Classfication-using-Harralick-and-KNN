@@ -10,13 +10,13 @@ def display_best_combination_metrics(best_combination):
     """Display best combination metrics in columns"""
     col_d, col_theta, col_k, col_accuracy = st.columns([1, 1, 1, 1]) 
     with col_d:
-        st.write(f"```\nd: \n{best_combination['d']}", help="Best d value")
+        st.write(f"```\nd: \n{best_combination['d']}")
     with col_theta:
-        st.write(f"```\ntheta: \n{best_combination['theta']}", help="Best theta value")
+        st.write(f"```\ntheta: \n{best_combination['theta']}")
     with col_k:
-        st.write(f"```\nk: \n{best_combination['best_k']}", help="Best k value")
+        st.write(f"```\nk: \n{best_combination['best_k']}")
     with col_accuracy:
-        st.write(f"```\nAccuracy: \n{best_combination['accuracy']:.2f}", help="Best accuracy value")
+        st.write(f"```\nAccuracy: \n{best_combination['accuracy']:.2f}")
 
 def display_test_sample_info(y_test, y_pred, test_sample_idx):
     """Display test sample prediction info"""
