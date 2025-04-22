@@ -40,7 +40,8 @@ plt.rcParams.update({
     'legend.facecolor': '#0083B8',  # Background color for legend
     'legend.edgecolor': '#FFF',     # color for legend border
 })
-## ----- Matplotlib Style Configuration END -----
+## ----- Matplotlib with st.expander(f"{class_name} (Class {class_label}) Metrics"):
+    # Content hereStyle Configuration END -----
 
 ## ----- Streamlit Configuration -----
 # Set Streamlit page configuration
@@ -152,7 +153,7 @@ with tab1:
     tab1col1, tab1col2 = st.columns([4,6])
     with tab1col1:
 
-        k_values = range(3, 26, 2) # Odd values for k
+        k_values = range(3, 26, 2) # odd values for k
         summary_df, all_results = preprocess_and_calculate_results(feature_dataframes, k_values)
 
         st.dataframe(summary_df)
