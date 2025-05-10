@@ -1,7 +1,5 @@
 # Apple Classification using Haralick Features and KNN
 
->This project focuses on classifying apple ripeness levels using Haralick texture features and the K-Nearest Neighbors (KNN) algorithm. The dataset consists of images of apples at different ripeness levels (20%, 40%, 60%, 80%, and 100%). The project includes preprocessing, feature extraction, and classification steps, along with a Streamlit-based dashboard for visualization and analysis.
-
 ## Features
 - **Preprocessing**: Includes resize, convert to grayscale, and preparing images for feature extraction.
 - **Feature Extraction**: Utilizes Haralick texture features with `d=(1,2,3)` and `theta=(0,45,90,135)` combination.
